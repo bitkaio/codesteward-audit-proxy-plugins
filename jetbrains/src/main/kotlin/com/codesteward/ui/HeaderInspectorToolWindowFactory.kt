@@ -7,6 +7,7 @@ import com.codesteward.session.SessionManager
 import com.codesteward.settings.CodestewardSettings
 import com.intellij.icons.AllIcons
 import com.intellij.openapi.actionSystem.AnActionEvent
+import com.intellij.openapi.util.IconLoader
 import com.intellij.openapi.ide.CopyPasteManager
 import com.intellij.openapi.project.DumbAwareAction
 import com.intellij.openapi.project.Project
@@ -39,7 +40,8 @@ class HeaderInspectorToolWindowFactory : ToolWindowFactory {
                 panel.refresh()
             }
         }
-        val healthAction = object : DumbAwareAction("Check Health", "Check proxy health", AllIcons.Actions.Execute) {
+        val healthIcon = IconLoader.getIcon("/icons/health.svg", HeaderInspectorToolWindowFactory::class.java)
+        val healthAction = object : DumbAwareAction("Check Health", "Check proxy health", healthIcon) {
             override fun actionPerformed(e: AnActionEvent) {
                 panel.refresh()
             }

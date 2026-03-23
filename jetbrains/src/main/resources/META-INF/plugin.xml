@@ -9,6 +9,7 @@
 
     <depends>com.intellij.modules.platform</depends>
     <depends>Git4Idea</depends>
+    <depends>org.jetbrains.plugins.terminal</depends>
 
     <extensions defaultExtensionNs="com.intellij">
         <!-- Settings -->
@@ -18,9 +19,6 @@
             instance="com.codesteward.settings.CodestewardConfigurable"
             id="com.codesteward.settings"
             displayName="Codesteward Audit Proxy"/>
-
-        <!-- Terminal env injection -->
-        <localTerminalCustomizer implementation="com.codesteward.terminal.AuditTerminalCustomizer"/>
 
         <!-- Status bar -->
         <statusBarWidgetFactory
@@ -32,7 +30,7 @@
             id="Codesteward"
             anchor="right"
             secondary="true"
-            icon="/icons/codesteward-icon.svg"
+            icon="/icons/codesteward-icon.png"
             factoryClass="com.codesteward.ui.HeaderInspectorToolWindowFactory"/>
 
         <!-- Notifications -->
@@ -40,6 +38,11 @@
 
         <!-- Startup activity -->
         <postStartupActivity implementation="com.codesteward.CodestewardStartupActivity"/>
+    </extensions>
+
+    <!-- Terminal env injection (extension point is defined by the terminal plugin) -->
+    <extensions defaultExtensionNs="org.jetbrains.plugins.terminal">
+        <localTerminalCustomizer implementation="com.codesteward.terminal.AuditTerminalCustomizer"/>
     </extensions>
 
     <actions>

@@ -1,0 +1,70 @@
+<idea-plugin>
+    <id>com.codesteward.audit-proxy</id>
+    <name>Codesteward Audit Proxy</name>
+    <vendor>Bitkai</vendor>
+    <description><![CDATA[
+        Configure the Codesteward audit proxy, inject identity metadata, and provide
+        observability into what headers are being forwarded to AI coding agents.
+    ]]></description>
+
+    <depends>com.intellij.modules.platform</depends>
+    <depends>Git4Idea</depends>
+
+    <extensions defaultExtensionNs="com.intellij">
+        <!-- Settings -->
+        <projectService serviceImplementation="com.codesteward.settings.CodestewardSettings"/>
+        <projectConfigurable
+            parentId="tools"
+            instance="com.codesteward.settings.CodestewardConfigurable"
+            id="com.codesteward.settings"
+            displayName="Codesteward Audit Proxy"/>
+
+        <!-- Terminal env injection -->
+        <localTerminalCustomizer implementation="com.codesteward.terminal.AuditTerminalCustomizer"/>
+
+        <!-- Status bar -->
+        <statusBarWidgetFactory
+            id="CodestewardStatusBar"
+            implementation="com.codesteward.ui.CodestewardStatusBarFactory"/>
+
+        <!-- Tool window for header inspector -->
+        <toolWindow
+            id="Codesteward"
+            anchor="right"
+            secondary="true"
+            icon="/icons/codesteward-icon.svg"
+            factoryClass="com.codesteward.ui.HeaderInspectorToolWindowFactory"/>
+
+        <!-- Startup activity -->
+        <postStartupActivity implementation="com.codesteward.CodestewardStartupActivity"/>
+    </extensions>
+
+    <actions>
+        <group id="Codesteward.ActionGroup" text="Codesteward" description="Codesteward audit proxy actions">
+            <action id="Codesteward.Toggle"
+                    class="com.codesteward.CodestewardToggleAction"
+                    text="Toggle Proxy"
+                    description="Enable or disable the Codesteward audit proxy"/>
+            <action id="Codesteward.OpenSettings"
+                    class="com.codesteward.CodestewardOpenSettingsAction"
+                    text="Open Settings"
+                    description="Open Codesteward settings"/>
+            <action id="Codesteward.ShowHeaders"
+                    class="com.codesteward.CodestewardShowHeadersAction"
+                    text="Show Header Inspector"
+                    description="Open the header inspector panel"/>
+            <action id="Codesteward.CopySessionId"
+                    class="com.codesteward.CodestewardCopySessionIdAction"
+                    text="Copy Session ID"
+                    description="Copy the current session ID to clipboard"/>
+            <action id="Codesteward.RefreshIdentity"
+                    class="com.codesteward.CodestewardRefreshIdentityAction"
+                    text="Refresh Identity"
+                    description="Re-detect git identity and update headers"/>
+            <action id="Codesteward.CheckHealth"
+                    class="com.codesteward.CodestewardCheckHealthAction"
+                    text="Check Proxy Health"
+                    description="Check if the audit proxy is reachable"/>
+        </group>
+    </actions>
+</idea-plugin>

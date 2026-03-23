@@ -1,0 +1,161 @@
+{
+  "name": "codesteward-audit-proxy",
+  "displayName": "Codesteward Audit Proxy",
+  "description": "Configure the Codesteward audit proxy, inject identity metadata, and provide observability into what headers are being forwarded to AI coding agents.",
+  "version": "0.1.0",
+  "publisher": "bitkaio",
+  "license": "MIT",
+  "icon": "assets/codesteward-icon.png",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "configuration": {
+      "title": "Codesteward Audit Proxy",
+      "properties": {
+        "codesteward.proxy.url": {
+          "type": "string",
+          "default": "http://localhost:8080",
+          "description": "URL of the Codesteward audit proxy"
+        },
+        "codesteward.proxy.enabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable or disable the audit proxy"
+        },
+        "codesteward.identity.user": {
+          "type": "string",
+          "default": "",
+          "description": "User identity override (empty = auto-detect from git)"
+        },
+        "codesteward.identity.project": {
+          "type": "string",
+          "default": "",
+          "description": "Project name override (empty = auto-detect from workspace)"
+        },
+        "codesteward.identity.branch": {
+          "type": "string",
+          "default": "",
+          "description": "Branch name override (empty = auto-detect from git)"
+        },
+        "codesteward.identity.team": {
+          "type": "string",
+          "default": "",
+          "description": "Team or organization identifier"
+        },
+        "codesteward.headers": {
+          "type": "object",
+          "default": {},
+          "description": "Additional custom headers to inject (key-value pairs)"
+        },
+        "codesteward.agents.claude": {
+          "type": "boolean",
+          "default": true,
+          "description": "Configure Claude Code CLI and VSCode extension"
+        },
+        "codesteward.agents.codex": {
+          "type": "boolean",
+          "default": true,
+          "description": "Configure Codex CLI"
+        },
+        "codesteward.agents.gemini": {
+          "type": "boolean",
+          "default": true,
+          "description": "Configure Gemini CLI"
+        },
+        "codesteward.agents.cline": {
+          "type": "boolean",
+          "default": true,
+          "description": "Configure Cline extension"
+        },
+        "codesteward.agents.aider": {
+          "type": "boolean",
+          "default": true,
+          "description": "Configure Aider"
+        },
+        "codesteward.agents.continue": {
+          "type": "boolean",
+          "default": true,
+          "description": "Configure Continue extension"
+        },
+        "codesteward.healthCheck.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable periodic proxy health checks"
+        },
+        "codesteward.healthCheck.intervalSeconds": {
+          "type": "number",
+          "default": 30,
+          "minimum": 5,
+          "description": "Health check interval in seconds"
+        }
+      }
+    },
+    "commands": [
+      {
+        "command": "codesteward.toggle",
+        "title": "Codesteward: Toggle Proxy"
+      },
+      {
+        "command": "codesteward.openSettings",
+        "title": "Codesteward: Open Settings"
+      },
+      {
+        "command": "codesteward.showHeaders",
+        "title": "Codesteward: Show Header Inspector"
+      },
+      {
+        "command": "codesteward.copySessionId",
+        "title": "Codesteward: Copy Session ID"
+      },
+      {
+        "command": "codesteward.refreshIdentity",
+        "title": "Codesteward: Refresh Identity"
+      },
+      {
+        "command": "codesteward.checkHealth",
+        "title": "Codesteward: Check Proxy Health"
+      }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "codesteward",
+          "title": "Codesteward",
+          "icon": "assets/codesteward-icon-abstract.png"
+        }
+      ]
+    },
+    "views": {
+      "codesteward": [
+        {
+          "id": "codesteward.headerInspector",
+          "name": "Header Inspector"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "lint": "eslint src --ext ts",
+    "package": "vsce package"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "@types/vscode": "^1.85.0",
+    "@typescript-eslint/eslint-plugin": "^7.0.0",
+    "@typescript-eslint/parser": "^7.0.0",
+    "eslint": "^8.56.0",
+    "typescript": "^5.3.0",
+    "@vscode/vsce": "^2.22.0"
+  }
+}

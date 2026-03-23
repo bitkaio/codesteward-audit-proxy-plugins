@@ -17,6 +17,13 @@ function refreshAll(context: vscode.ExtensionContext): void {
   const config = getConfig(identity);
   const sessionId = sessionManager.getSessionId();
 
+  // Set context key for welcome view visibility
+  vscode.commands.executeCommand(
+    'setContext',
+    'codesteward.configured',
+    config.enabled,
+  );
+
   const envCollection = context.environmentVariableCollection;
   applyToEnvironment(envCollection, config, sessionId);
 

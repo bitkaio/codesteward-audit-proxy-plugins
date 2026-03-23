@@ -7,7 +7,7 @@
   "license": "MIT",
   "icon": "assets/codesteward-icon.png",
   "engines": {
-    "vscode": "^1.85.0"
+    "vscode": "^1.95.0"
   },
   "categories": [
     "Other"
@@ -101,29 +101,80 @@
     "commands": [
       {
         "command": "codesteward.toggle",
-        "title": "Codesteward: Toggle Proxy"
+        "title": "Toggle Proxy",
+        "category": "Codesteward",
+        "icon": "$(plug)"
       },
       {
         "command": "codesteward.openSettings",
-        "title": "Codesteward: Open Settings"
+        "title": "Open Settings",
+        "category": "Codesteward",
+        "icon": "$(gear)"
       },
       {
         "command": "codesteward.showHeaders",
-        "title": "Codesteward: Show Header Inspector"
+        "title": "Show Header Inspector",
+        "category": "Codesteward",
+        "icon": "$(list-tree)"
       },
       {
         "command": "codesteward.copySessionId",
-        "title": "Codesteward: Copy Session ID"
+        "title": "Copy Session ID",
+        "category": "Codesteward",
+        "icon": "$(key)"
       },
       {
         "command": "codesteward.refreshIdentity",
-        "title": "Codesteward: Refresh Identity"
+        "title": "Refresh Identity",
+        "category": "Codesteward",
+        "icon": "$(refresh)"
       },
       {
         "command": "codesteward.checkHealth",
-        "title": "Codesteward: Check Proxy Health"
+        "title": "Check Proxy Health",
+        "category": "Codesteward",
+        "icon": "$(pulse)"
+      },
+      {
+        "command": "codesteward.copyValue",
+        "title": "Copy Value",
+        "category": "Codesteward",
+        "icon": "$(clippy)"
       }
     ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "codesteward.refreshIdentity",
+          "when": "view == codesteward.headerInspector",
+          "group": "navigation"
+        },
+        {
+          "command": "codesteward.checkHealth",
+          "when": "view == codesteward.headerInspector",
+          "group": "navigation"
+        },
+        {
+          "command": "codesteward.openSettings",
+          "when": "view == codesteward.headerInspector"
+        },
+        {
+          "command": "codesteward.toggle",
+          "when": "view == codesteward.headerInspector"
+        },
+        {
+          "command": "codesteward.copySessionId",
+          "when": "view == codesteward.headerInspector"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "codesteward.copyValue",
+          "when": "view == codesteward.headerInspector && viewItem == copyable",
+          "group": "inline"
+        }
+      ]
+    },
     "viewsContainers": {
       "activitybar": [
         {
@@ -140,7 +191,14 @@
           "name": "Header Inspector"
         }
       ]
-    }
+    },
+    "viewsWelcome": [
+      {
+        "view": "codesteward.headerInspector",
+        "contents": "Codesteward audit proxy is not configured yet.\n\nRoute your AI coding agents through the proxy to capture structured audit events with identity metadata.\n\n[Configure Proxy](command:codesteward.toggle)\n\nOr add a `.codesteward.json` to your repo root.\n\n[Open Settings](command:codesteward.openSettings)",
+        "when": "!codesteward.configured"
+      }
+    ]
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",
@@ -150,12 +208,12 @@
     "package": "vsce package"
   },
   "devDependencies": {
-    "@types/node": "^20.11.0",
-    "@types/vscode": "^1.85.0",
-    "@typescript-eslint/eslint-plugin": "^7.0.0",
-    "@typescript-eslint/parser": "^7.0.0",
-    "eslint": "^8.56.0",
-    "typescript": "^5.3.0",
-    "@vscode/vsce": "^2.22.0"
+    "@types/node": "^22.0.0",
+    "@types/vscode": "^1.95.0",
+    "@typescript-eslint/eslint-plugin": "^8.0.0",
+    "@typescript-eslint/parser": "^8.0.0",
+    "eslint": "^9.0.0",
+    "typescript": "^5.7.0",
+    "@vscode/vsce": "^3.0.0"
   }
 }

@@ -4,6 +4,7 @@ import com.codesteward.config.RepoConfigReader
 import com.codesteward.identity.IdentityDetector
 import com.codesteward.session.SessionManager
 import com.codesteward.settings.CodestewardSettings
+import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.project.Project
 import org.jetbrains.plugins.terminal.LocalTerminalCustomizer
 
@@ -16,7 +17,11 @@ class AuditTerminalCustomizer : LocalTerminalCustomizer() {
         envs: MutableMap<String, String>,
     ): Array<out String> {
         val settings = CodestewardSettings.getInstance(project).state
-        if (!settings.enabled) return command
+        if (!settings.enabled) {
+            LOG.debug("Proxy disabled, skipping terminal env injection")
+            return command
+        }
+        LOG.info("Injecting audit proxy env vars into new terminal (proxy=${settings.proxyUrl})")
 
         val repoConfig = RepoConfigReader.read(project)
         val identity = IdentityDetector.detect(project)
@@ -70,6 +75,11 @@ class AuditTerminalCustomizer : LocalTerminalCustomizer() {
             envs["AIDER_EXTRA_HEADERS"] = jsonHeaders
         }
 
+        LOG.info("Terminal env vars set: ${envs.keys.filter { it.contains("BASE_URL") || it.contains("HEADERS") }.joinToString()}")
         return command
+    }
+
+    companion object {
+        private val LOG = Logger.getInstance(AuditTerminalCustomizer::class.java)
     }
 }

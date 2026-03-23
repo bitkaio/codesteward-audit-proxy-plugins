@@ -1,7 +1,7 @@
 plugins {
     id("java")
-    id("org.jetbrains.kotlin.jvm") version "1.9.22"
-    id("org.jetbrains.intellij.platform") version "2.2.1"
+    id("org.jetbrains.kotlin.jvm") version "2.1.10"
+    id("org.jetbrains.intellij.platform") version "2.13.1"
 }
 
 group = "com.codesteward"
@@ -16,14 +16,14 @@ repositories {
 
 dependencies {
     intellijPlatform {
-        intellijIdeaCommunity("2024.1")
+        intellijIdeaCommunity("2024.3")
         bundledPlugin("Git4Idea")
-        instrumentationTools()
+        bundledPlugin("org.jetbrains.plugins.terminal")
     }
 }
 
 kotlin {
-    jvmToolchain(17)
+    jvmToolchain(21)
 }
 
 intellijPlatform {
@@ -36,10 +36,10 @@ intellijPlatform {
             observability into what headers are being forwarded to AI coding agents.
         """.trimIndent()
         vendor {
-            name = "Bitkai"
+            name = "bikaio"
         }
         ideaVersion {
-            sinceBuild = "241"
+            sinceBuild = "243"
         }
     }
 }

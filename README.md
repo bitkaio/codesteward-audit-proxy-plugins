@@ -146,6 +146,7 @@ npm run compile    # or npm run watch
 
 ```sh
 cd jetbrains
+gradle wrapper          # first time only — generates ./gradlew
 ./gradlew buildPlugin
 # Run with: ./gradlew runIde
 ```

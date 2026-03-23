@@ -1,8 +1,12 @@
 package com.codesteward.health
 
 import com.google.gson.Gson
+import com.intellij.notification.NotificationGroupManager
+import com.intellij.notification.NotificationType
 import com.intellij.openapi.Disposable
+import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.components.Service
+import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.project.Project
 import java.net.HttpURLConnection
 import java.net.URI
@@ -21,9 +25,9 @@ fun interface HealthStatusListener {
 }
 
 @Service(Service.Level.PROJECT)
-class HealthChecker : Disposable {
+class HealthChecker(private val project: Project) : Disposable {
     private var timer: Timer? = null
-    private var lastStatus = HealthStatus(reachable = false)
+    private var lastStatus = HealthStatus(reachable = false, error = "Not checked yet")
     private var hasNotifiedFailure = false
     private val listeners = CopyOnWriteArrayList<HealthStatusListener>()
     private val gson = Gson()
@@ -37,6 +41,7 @@ class HealthChecker : Disposable {
     fun start(proxyUrl: String, intervalSeconds: Int) {
         stop()
         hasNotifiedFailure = false
+        LOG.info("Starting health checks against $proxyUrl every ${intervalSeconds}s")
 
         timer = Timer("CodestewardHealthCheck", true).apply {
             scheduleAtFixedRate(object : TimerTask() {
@@ -48,6 +53,11 @@ class HealthChecker : Disposable {
 
                     if (changed) {
                         listeners.forEach { it.onStatusChange(status) }
+                    }
+
+                    if (!status.reachable && !hasNotifiedFailure) {
+                        hasNotifiedFailure = true
+                        notifyError(proxyUrl, status.error)
                     }
 
                     if (status.reachable) {
@@ -64,6 +74,7 @@ class HealthChecker : Disposable {
     }
 
     fun checkHealth(proxyUrl: String): HealthStatus {
+        LOG.debug("Checking health at $proxyUrl/healthz")
         return try {
             val url = URI("$proxyUrl/healthz").toURL()
             val conn = url.openConnection() as HttpURLConnection
@@ -76,18 +87,39 @@ class HealthChecker : Disposable {
                 val body = conn.inputStream.bufferedReader().readText()
                 try {
                     val parsed = gson.fromJson(body, Map::class.java)
-                    HealthStatus(
+                    val status = HealthStatus(
                         reachable = true,
                         version = parsed["version"] as? String,
                     )
+                    LOG.info("Proxy healthy: ${status.version ?: "no version"}")
+                    status
                 } catch (_: Exception) {
+                    LOG.info("Proxy reachable but response not parseable")
                     HealthStatus(reachable = true)
                 }
             } else {
-                HealthStatus(reachable = false, error = "HTTP $responseCode")
+                val error = "HTTP $responseCode"
+                LOG.warn("Proxy health check failed: $error")
+                HealthStatus(reachable = false, error = error)
             }
         } catch (e: Exception) {
-            HealthStatus(reachable = false, error = e.message)
+            val error = "${e.javaClass.simpleName}: ${e.message}"
+            LOG.warn("Proxy health check failed: $error")
+            HealthStatus(reachable = false, error = error)
+        }
+    }
+
+    private fun notifyError(proxyUrl: String, error: String?) {
+        ApplicationManager.getApplication().invokeLater {
+            NotificationGroupManager.getInstance()
+                .getNotificationGroup("Codesteward")
+                .createNotification(
+                    "Codesteward: Proxy Unreachable",
+                    "Cannot connect to $proxyUrl — ${error ?: "unknown error"}. " +
+                            "Check that the proxy is running and the URL is correct.",
+                    NotificationType.WARNING,
+                )
+                .notify(project)
         }
     }
 
@@ -97,6 +129,8 @@ class HealthChecker : Disposable {
     }
 
     companion object {
+        private val LOG = Logger.getInstance(HealthChecker::class.java)
+
         fun getInstance(project: Project): HealthChecker =
             project.getService(HealthChecker::class.java)
     }

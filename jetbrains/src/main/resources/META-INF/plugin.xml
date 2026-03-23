@@ -1,7 +1,7 @@
 <idea-plugin>
     <id>com.codesteward.audit-proxy</id>
     <name>Codesteward Audit Proxy</name>
-    <vendor>Bitkai</vendor>
+    <vendor>bikaio</vendor>
     <description><![CDATA[
         Configure the Codesteward audit proxy, inject identity metadata, and provide
         observability into what headers are being forwarded to AI coding agents.
@@ -34,6 +34,9 @@
             secondary="true"
             icon="/icons/codesteward-icon.svg"
             factoryClass="com.codesteward.ui.HeaderInspectorToolWindowFactory"/>
+
+        <!-- Notifications -->
+        <notificationGroup id="Codesteward" displayType="STICKY_BALLOON"/>
 
         <!-- Startup activity -->
         <postStartupActivity implementation="com.codesteward.CodestewardStartupActivity"/>

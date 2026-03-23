@@ -40,18 +40,25 @@ class CodestewardStatusBarWidget(private val project: Project) :
         if (!settings.enabled) return "Codesteward (off)"
 
         val health = HealthChecker.getInstance(project).getLastStatus()
-        return if (health.reachable) "Codesteward" else "Codesteward (!)"
+        return when {
+            health.reachable -> "Codesteward"
+            health.error == "Not checked yet" -> "Codesteward (?)"
+            else -> "Codesteward (!)"
+        }
     }
 
     override fun getTooltipText(): String {
         val settings = CodestewardSettings.getInstance(project).state
-        if (!settings.enabled) return "Codesteward Audit Proxy: Disabled"
+        if (!settings.enabled) return "Codesteward Audit Proxy: Disabled — click to enable"
 
         val health = HealthChecker.getInstance(project).getLastStatus()
-        return if (health.reachable) {
-            "Codesteward Audit Proxy: Connected${health.version?.let { " (v$it)" } ?: ""}"
-        } else {
-            "Codesteward Audit Proxy: Unreachable - ${health.error ?: "unknown"}"
+        return when {
+            health.reachable ->
+                "Codesteward Audit Proxy: Connected${health.version?.let { " (v$it)" } ?: ""}\n${settings.proxyUrl}"
+            health.error == "Not checked yet" ->
+                "Codesteward Audit Proxy: Checking...\n${settings.proxyUrl}"
+            else ->
+                "Codesteward Audit Proxy: Unreachable\n${settings.proxyUrl}\nError: ${health.error ?: "no response"}"
         }
     }
 
@@ -59,7 +66,17 @@ class CodestewardStatusBarWidget(private val project: Project) :
 
     override fun getClickConsumer(): Consumer<MouseEvent> = Consumer {
         val settings = CodestewardSettings.getInstance(project)
-        settings.state.enabled = !settings.state.enabled
+        val wasEnabled = settings.state.enabled
+        settings.state.enabled = !wasEnabled
+
+        if (!wasEnabled && settings.state.healthCheckEnabled) {
+            // Just enabled — start health checking
+            val healthChecker = HealthChecker.getInstance(project)
+            healthChecker.start(settings.state.proxyUrl, settings.state.healthCheckIntervalSeconds)
+        } else if (wasEnabled) {
+            HealthChecker.getInstance(project).stop()
+        }
+
         statusBar?.updateWidget(ID())
     }
 

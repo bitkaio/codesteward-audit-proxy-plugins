@@ -123,8 +123,14 @@ export function hasProxyConfigured(): boolean {
   const settings = vscode.workspace.getConfiguration('codesteward');
   const repoConfig = readRepoConfig();
 
-  const hasSettingsUrl = !!settings.get<string>('proxy.url');
+  // Check if the user has explicitly set a proxy URL (not just the default)
+  const inspection = settings.inspect<string>('proxy.url');
+  const hasExplicitUrl =
+    !!inspection?.workspaceValue ||
+    !!inspection?.workspaceFolderValue ||
+    !!inspection?.globalValue;
+
   const hasRepoUrl = !!repoConfig?.proxy?.url;
 
-  return hasSettingsUrl || hasRepoUrl;
+  return hasExplicitUrl || hasRepoUrl;
 }

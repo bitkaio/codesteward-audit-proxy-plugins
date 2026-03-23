@@ -3,33 +3,54 @@ import { ResolvedConfig } from './config';
 import { buildAuditHeaders, getAgentEnvInfo } from './agents';
 import { HealthStatus } from './health';
 
-type TreeItemType = 'category' | 'entry';
-
 class HeaderTreeItem extends vscode.TreeItem {
   constructor(
-    public readonly label: string,
-    public readonly itemType: TreeItemType,
+    label: string,
     public readonly children?: HeaderTreeItem[],
-    public readonly copyValue?: string,
+    options?: {
+      description?: string;
+      icon?: string;
+      iconColor?: vscode.ThemeColor;
+      copyValue?: string;
+      collapsed?: boolean;
+      contextValue?: string;
+    },
   ) {
     super(
       label,
       children
-        ? vscode.TreeItemCollapsibleState.Expanded
+        ? options?.collapsed
+          ? vscode.TreeItemCollapsibleState.Collapsed
+          : vscode.TreeItemCollapsibleState.Expanded
         : vscode.TreeItemCollapsibleState.None,
     );
 
-    if (itemType === 'entry' && copyValue) {
-      this.tooltip = `Click to copy: ${copyValue}`;
+    if (options?.description) {
+      this.description = options.description;
+    }
+
+    if (options?.icon) {
+      this.iconPath = new vscode.ThemeIcon(
+        options.icon,
+        options.iconColor,
+      );
+    }
+
+    if (options?.copyValue) {
+      this.tooltip = new vscode.MarkdownString(
+        `\`${options.copyValue}\`\n\n$(clippy) Click to copy`,
+      );
+      this.tooltip.supportThemeIcons = true;
       this.command = {
         command: 'codesteward.copyValue',
         title: 'Copy Value',
-        arguments: [copyValue],
+        arguments: [options.copyValue],
       };
+      this.contextValue = 'copyable';
     }
 
-    if (itemType === 'category') {
-      this.iconPath = new vscode.ThemeIcon('folder');
+    if (options?.contextValue) {
+      this.contextValue = options.contextValue;
     }
   }
 }
@@ -67,78 +88,140 @@ export class HeaderInspectorProvider
     }
 
     if (!this.config) {
-      return [new HeaderTreeItem('Not configured', 'entry')];
+      return [
+        new HeaderTreeItem('No proxy configured', undefined, {
+          icon: 'info',
+          description: 'Run "Codesteward: Toggle Proxy" to get started',
+        }),
+      ];
     }
 
     if (!this.config.enabled) {
-      return [new HeaderTreeItem('Proxy disabled', 'entry')];
+      return [
+        new HeaderTreeItem('Proxy disabled', undefined, {
+          icon: 'circle-slash',
+          description: 'Click the status bar or run Toggle Proxy',
+        }),
+      ];
     }
 
-    const items: HeaderTreeItem[] = [];
+    return [
+      this.buildStatusItem(),
+      this.buildIdentitySection(),
+      this.buildAgentsSection(),
+      ...this.buildCustomHeadersSection(),
+    ];
+  }
 
-    // Status
-    const statusText = this.healthStatus.reachable
-      ? `Connected${this.healthStatus.version ? ` (v${this.healthStatus.version})` : ''}`
-      : `Unreachable — ${this.healthStatus.error || 'unknown'}`;
-    items.push(new HeaderTreeItem(`Status: ${statusText}`, 'entry'));
-
-    // Session
-    items.push(
-      new HeaderTreeItem(
-        `Session: ${this.sessionId.substring(0, 8)}...`,
-        'entry',
-        undefined,
-        this.sessionId,
-      ),
-    );
-
-    // Injected Headers
-    const headers = buildAuditHeaders(this.config, this.sessionId);
-    const headerItems = Object.entries(headers)
-      .filter(([, v]) => v !== '')
-      .map(
-        ([k, v]) =>
-          new HeaderTreeItem(`${k}: ${v}`, 'entry', undefined, v),
-      );
-    items.push(
-      new HeaderTreeItem('Injected Headers', 'category', headerItems),
-    );
-
-    // Agent Configuration
-    const agentInfos = getAgentEnvInfo(this.config, this.sessionId);
-    const agentItems = agentInfos.map((agent) => {
-      const envItems = Object.entries(agent.envVars).map(
-        ([k, v]) => {
-          const display = v.length > 60 ? `${v.substring(0, 60)}...` : v;
-          return new HeaderTreeItem(
-            `${k}: ${display}`,
-            'entry',
-            undefined,
-            v,
-          );
-        },
-      );
-      return new HeaderTreeItem(agent.name, 'category', envItems);
+  private buildStatusItem(): HeaderTreeItem {
+    if (this.healthStatus.reachable) {
+      const version = this.healthStatus.version
+        ? `v${this.healthStatus.version}`
+        : '';
+      return new HeaderTreeItem('Connected', undefined, {
+        description: [this.config!.proxyUrl, version]
+          .filter(Boolean)
+          .join(' \u2014 '),
+        icon: 'pass-filled',
+        iconColor: new vscode.ThemeColor('testing.iconPassed'),
+      });
+    }
+    return new HeaderTreeItem('Unreachable', undefined, {
+      description: this.healthStatus.error || this.config!.proxyUrl,
+      icon: 'error',
+      iconColor: new vscode.ThemeColor('testing.iconFailed'),
     });
-    if (agentItems.length > 0) {
-      items.push(
-        new HeaderTreeItem('Agent Configuration', 'category', agentItems),
-      );
+  }
+
+  private buildIdentitySection(): HeaderTreeItem {
+    const headers = buildAuditHeaders(this.config!, this.sessionId);
+
+    const headerIconMap: Record<string, string> = {
+      'X-Audit-User': 'account',
+      'X-Audit-Project': 'repo',
+      'X-Audit-Branch': 'git-branch',
+      'X-Audit-Session-ID': 'key',
+      'X-Audit-Team': 'organization',
+    };
+
+    const items = Object.entries(headers).map(([k, v]) => {
+      const icon = headerIconMap[k] || 'symbol-field';
+      const displayValue = k === 'X-Audit-Session-ID'
+        ? `${v.substring(0, 8)}...`
+        : v || '(empty)';
+      return new HeaderTreeItem(k.replace('X-Audit-', ''), undefined, {
+        description: displayValue,
+        icon,
+        copyValue: v,
+      });
+    });
+
+    return new HeaderTreeItem('Identity', items, {
+      icon: 'shield',
+      description: `${Object.values(headers).filter(Boolean).length} headers`,
+    });
+  }
+
+  private buildAgentsSection(): HeaderTreeItem {
+    const agentInfos = getAgentEnvInfo(this.config!, this.sessionId);
+
+    const agentIconMap: Record<string, string> = {
+      'Claude Code CLI': 'terminal',
+      'Codex CLI': 'terminal',
+      'Gemini CLI': 'terminal',
+      Aider: 'terminal',
+      'Cline (in-process)': 'extensions',
+      'Continue (in-process)': 'extensions',
+    };
+
+    const agentItems = agentInfos.map((agent) => {
+      const envItems = Object.entries(agent.envVars).map(([k, v]) => {
+        const isUrl = k.includes('BASE_URL');
+        const display =
+          v.length > 50 ? `${v.substring(0, 50)}...` : v;
+        return new HeaderTreeItem(k, undefined, {
+          description: display,
+          icon: isUrl ? 'globe' : 'list-flat',
+          copyValue: v,
+        });
+      });
+      return new HeaderTreeItem(agent.name, envItems, {
+        icon: agentIconMap[agent.name] || 'terminal',
+        description: `${envItems.length} vars`,
+        collapsed: true,
+      });
+    });
+
+    return new HeaderTreeItem('Agents', agentItems, {
+      icon: 'hubot',
+      description: `${agentItems.length} configured`,
+    });
+  }
+
+  private buildCustomHeadersSection(): HeaderTreeItem[] {
+    const customEntries = Object.entries(
+      this.config!.customHeaders,
+    );
+    if (customEntries.length === 0) {
+      return [];
     }
 
-    // Custom Headers
-    const customEntries = Object.entries(this.config.customHeaders);
-    if (customEntries.length > 0) {
-      const customItems = customEntries.map(
-        ([k, v]) =>
-          new HeaderTreeItem(`${k}: ${v}`, 'entry', undefined, v),
-      );
-      items.push(
-        new HeaderTreeItem('Custom Headers', 'category', customItems),
-      );
-    }
+    const customItems = customEntries.map(
+      ([k, v]) =>
+        new HeaderTreeItem(k, undefined, {
+          description: v,
+          icon: 'symbol-field',
+          copyValue: v,
+        }),
+    );
 
-    return items;
+    return [
+      new HeaderTreeItem('Custom Headers', customItems, {
+        icon: 'settings-gear',
+        description: `${customItems.length} headers`,
+        collapsed: true,
+      }),
+    ];
   }
 
   dispose(): void {

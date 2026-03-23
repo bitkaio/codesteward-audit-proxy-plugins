@@ -108,6 +108,7 @@ dist
 .yarn/install-state.gz
 .pnp.*
 .gradle
+.intellijPlatform
 **/build/
 !src/**/build/
 gradle-app.setting

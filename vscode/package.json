@@ -2,7 +2,7 @@
   "name": "codesteward-audit-proxy",
   "displayName": "Codesteward Audit Proxy",
   "description": "Configure the Codesteward audit proxy, inject identity metadata, and provide observability into what headers are being forwarded to AI coding agents.",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "publisher": "bitkaio",
   "license": "MIT",
   "icon": "assets/codesteward-icon.png",

@@ -1,0 +1,148 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  build-vscode:
+    name: Build VSCode Extension
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: vscode/package-lock.json
+
+      - name: Symlink LICENSE into vscode/
+        run: ln -s ../../LICENSE vscode/LICENSE
+
+      - name: Install dependencies
+        working-directory: vscode
+        run: npm ci
+
+      - name: Package VSIX
+        working-directory: vscode
+        run: npx vsce package --no-git-tag-version
+
+      - name: Upload VSIX artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: vsix
+          path: vscode/*.vsix
+
+  build-jetbrains:
+    name: Build JetBrains Plugin
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Symlink LICENSE into jetbrains/
+        run: ln -s ../../LICENSE jetbrains/LICENSE
+
+      - name: Build plugin
+        working-directory: jetbrains
+        run: ./gradlew buildPlugin
+
+      - name: Upload plugin ZIP artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: jetbrains-zip
+          path: jetbrains/build/distributions/*.zip
+
+  release:
+    name: Create GitHub Release
+    needs: [build-vscode, build-jetbrains]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Extract changelog for this version
+        run: |
+          TAG="${GITHUB_REF_NAME#v}"
+
+          extract_section() {
+            awk -v ver="$TAG" '
+              /^## / {
+                if (found) exit
+                if (index($0, ver)) found=1
+                next
+              }
+              found { print }
+            ' "$1"
+          }
+
+          : > /tmp/release-notes.md
+
+          VSCODE_NOTES=$(extract_section vscode/CHANGELOG.md)
+          JETBRAINS_NOTES=$(extract_section jetbrains/CHANGELOG.md)
+
+          if [ -n "$VSCODE_NOTES" ]; then
+            echo "## VSCode Extension" >> /tmp/release-notes.md
+            echo "" >> /tmp/release-notes.md
+            echo "$VSCODE_NOTES" >> /tmp/release-notes.md
+            echo "" >> /tmp/release-notes.md
+          fi
+
+          if [ -n "$JETBRAINS_NOTES" ]; then
+            echo "## JetBrains Plugin" >> /tmp/release-notes.md
+            echo "" >> /tmp/release-notes.md
+            echo "$JETBRAINS_NOTES" >> /tmp/release-notes.md
+            echo "" >> /tmp/release-notes.md
+          fi
+
+          if [ ! -s /tmp/release-notes.md ]; then
+            echo "Release ${GITHUB_REF_NAME}" > /tmp/release-notes.md
+          fi
+
+      - name: Append installation instructions
+        run: |
+          cat >> /tmp/release-notes.md << 'INSTRUCTIONS'
+
+          ---
+
+          ## Installation
+
+          ### VSCode
+
+          1. Download the `.vsix` file from the assets below
+          2. In VSCode, open the Command Palette (`Ctrl+Shift+P` / `Cmd+Shift+P`)
+          3. Run **Extensions: Install from VSIX...**
+          4. Select the downloaded `.vsix` file
+          5. Reload the window when prompted
+
+          ### JetBrains (IntelliJ IDEA, PhpStorm, WebStorm, PyCharm, etc.)
+
+          1. Download the `.zip` file from the assets below
+          2. Open **Settings** (`Ctrl+Alt+S` / `Cmd+,`) > **Plugins**
+          3. Click the gear icon and select **Install Plugin from Disk...**
+          4. Select the downloaded `.zip` file
+          5. Restart the IDE when prompted
+          INSTRUCTIONS
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          body_path: /tmp/release-notes.md
+          files: |
+            artifacts/vsix/*.vsix
+            artifacts/jetbrains-zip/*.zip

@@ -5,6 +5,10 @@
   "version": "1.0.0",
   "publisher": "bitkaio",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/bitkaio/codesteward-audit-proxy-plugin"
+  },
   "icon": "assets/codesteward-icon.png",
   "engines": {
     "vscode": "^1.95.0"

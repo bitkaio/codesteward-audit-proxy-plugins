@@ -21,8 +21,8 @@ jobs:
           cache: npm
           cache-dependency-path: vscode/package-lock.json
 
-      - name: Symlink LICENSE into vscode/
-        run: ln -s ../../LICENSE vscode/LICENSE
+      - name: Copy LICENSE into vscode/
+        run: cp LICENSE vscode/LICENSE
 
       - name: Install dependencies
         working-directory: vscode
@@ -51,8 +51,8 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v4
 
-      - name: Symlink LICENSE into jetbrains/
-        run: ln -s ../../LICENSE jetbrains/LICENSE
+      - name: Copy LICENSE into jetbrains/
+        run: cp LICENSE jetbrains/LICENSE
 
       - name: Build plugin
         working-directory: jetbrains
